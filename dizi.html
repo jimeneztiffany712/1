@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>七音竖笛 · 谐波合成</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%}
+body{
+    background:linear-gradient(160deg,#141414,#1f1f1f);
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    padding:16px;overflow:hidden;
+    font-family:"Microsoft YaHei",sans-serif;color:#ddd
+}
+h1{font-size:16px;font-weight:normal;color:#888;margin-bottom:14px;letter-spacing:1px}
+.keys{display:flex;gap:14px;flex-wrap:nowrap;margin-bottom:20px}
+.key{
+    width:92px;height:92px;border-radius:50%;
+    background:#f7f7f7;border:2px solid #ddd;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    transition:transform .05s,background .05s,box-shadow .05s;
+    user-select:none;-webkit-user-select:none;
+    -webkit-tap-highlight-color:transparent;touch-action:none;flex-shrink:0;
+    box-shadow:0 4px 12px rgba(0,0,0,.4)
+}
+.key.on{transform:scale(.92);background:#4a9eff;border-color:#2b7de0;
+    box-shadow:0 0 24px rgba(74,158,255,.65)}
+.key .num{font-size:30px;font-weight:bold;color:#222;line-height:1}
+.key .nm{font-size:12px;color:#666;margin-top:4px}
+.key.on .num{color:#fff}
+.key.on .nm{color:#e8f2ff}
+.bar{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;
+    background:rgba(255,255,255,.05);padding:12px 16px;border-radius:14px;
+    border:1px solid rgba(255,255,255,.08);max-width:660px}
+.bar button,.bar select{
+    padding:9px 16px;border:none;border-radius:8px;font-size:14px;
+    font-family:inherit;cursor:pointer;background:#333;color:#ddd;transition:.2s}
+.bar button:hover{background:#444}
+.bar button.on{background:#e04040;color:#fff;animation:blink 1s infinite}
+.bar select{background:#2a2a2a}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
+.status{margin-top:12px;font-size:13px;color:#888;height:18px}
+.log-wrap{margin-top:14px;width:100%;max-width:660px;
+    background:rgba(255,255,255,.04);border-radius:12px;
+    border:1px solid rgba(255,255,255,.08);
+    max-height:150px;overflow-y:auto;padding:10px 12px}
+.log-wrap h4{font-size:13px;color:#888;margin-bottom:8px;font-weight:normal}
+.log-item{display:flex;justify-content:space-between;align-items:center;
+    padding:6px 8px;border-radius:6px;font-size:13px;color:#aaa;
+    background:rgba(255,255,255,.03);margin-bottom:5px;cursor:pointer}
+.log-item:hover{background:rgba(255,255,255,.08)}
+.log-item .notes{color:#4a9eff;letter-spacing:2px}
+.log-item .meta{color:#666;font-size:12px}
+.log-empty{color:#555;font-size:13px;text-align:center;padding:10px}
+.panel{margin-top:14px;width:100%;max-width:660px;
+    background:rgba(255,255,255,.04);border-radius:12px;
+    border:1px solid rgba(255,255,255,.08);overflow:hidden}
+.panel-head{padding:10px 14px;font-size:13px;color:#888;
+    cursor:pointer;display:flex;justify-content:space-between;
+    align-items:center;user-select:none}
+.panel-head:hover{background:rgba(255,255,255,.03)}
+.panel-head .toggle{transition:transform .2s;font-size:11px}
+.panel.closed .toggle{transform:rotate(-90deg)}
+.panel-body{padding:4px 14px 14px}
+.panel.closed .panel-body{display:none}
+.row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.row label{width:70px;font-size:12px;color:#999;flex-shrink:0}
+.row input[type=range]{flex:1;height:4px;-webkit-appearance:none;
+    appearance:none;background:#3a3a3a;border-radius:2px;outline:none}
+.row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;
+    appearance:none;width:14px;height:14px;border-radius:50%;
+    background:#4a9eff;cursor:pointer}
+.row input[type=range]::-moz-range-thumb{width:14px;height:14px;
+    border-radius:50%;background:#4a9eff;cursor:pointer;border:none}
+.row .val{width:38px;text-align:right;font-size:12px;color:#4a9eff;
+    font-family:monospace;flex-shrink:0}
+.row.sep{margin-top:14px;padding-top:12px;
+    border-top:1px solid rgba(255,255,255,.08)}
+.btns{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.btns button{flex:1;padding:7px 10px;border:none;border-radius:6px;
+    font-size:12px;font-family:inherit;cursor:pointer;
+    background:#333;color:#ccc;transition:.2s;min-width:70px}
+.btns button:hover{background:#444}
+@media(max-width:520px){
+    .row label{width:58px;font-size:11px}
+    .btns button{font-size:11px;padding:6px 8px}
+}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-thumb{background:#3a3a3a;border-radius:3px}
+@media(max-width:700px){
+    .keys{gap:9px}.key{width:72px;height:72px}
+    .key .num{font-size:24px}.key .nm{font-size:10px}
+    .bar button,.bar select{padding:7px 12px;font-size:13px}
+}
+@media(max-width:520px){
+    .keys{gap:6px}.key{width:58px;height:58px}
+    .key .num{font-size:20px}.key .nm{display:none}
+}
+</style>
+</head>
+<body>
+
+<h1>七音竖笛 · 奇次谐波合成</h1>
+
+<div class="keys" id="keys">
+    <div class="key" data-num="1"><div class="num">1</div><div class="nm">Do</div></div>
+    <div class="key" data-num="2"><div class="num">2</div><div class="nm">Re</div></div>
+    <div class="key" data-num="3"><div class="num">3</div><div class="nm">Mi</div></div>
+    <div class="key" data-num="4"><div class="num">4</div><div class="nm">Fa</div></div>
+    <div class="key" data-num="5"><div class="num">5</div><div class="nm">Sol</div></div>
+    <div class="key" data-num="6"><div class="num">6</div><div class="nm">La</div></div>
+    <div class="key" data-num="7"><div class="num">7</div><div class="nm">Si</div></div>
+</div>
+
+<div class="bar">
+    <select id="scale">
+        <option value="0">C 调</option>
+        <option value="2">D 调</option>
+        <option value="4">E 调</option>
+        <option value="5">F 调</option>
+        <option value="7">G 调</option>
+        <option value="9">A 调</option>
+        <option value="11">B 调</option>
+    </select>
+    <button id="recBtn">● 开始录制</button>
+    <button id="playBtn">▶ 播放</button>
+    <button id="pauseBtn">❚❚ 暂停</button>
+    <button id="stopBtn">■ 停止</button>
+    <button id="clearBtn">清空记录</button>
+</div>
+
+<div class="status" id="status">正在初始化…</div>
+
+<div class="panel" id="panel">
+    <div class="panel-head" id="panelHead">
+        <span>谐波比例调节</span>
+        <span class="toggle">▼</span>
+    </div>
+    <div class="panel-body">
+        <div class="row">
+            <label>基频 1f</label>
+            <input type="range" id="h1" min="0" max="100" value="100">
+            <span class="val" id="h1v">1.00</span>
+        </div>
+        <div class="row">
+            <label>3次 3f</label>
+            <input type="range" id="h3" min="0" max="100" value="42">
+            <span class="val" id="h3v">0.42</span>
+        </div>
+        <div class="row">
+            <label>5次 5f</label>
+            <input type="range" id="h5" min="0" max="100" value="16">
+            <span class="val" id="h5v">0.16</span>
+        </div>
+        <div class="row">
+            <label>7次 7f</label>
+            <input type="range" id="h7" min="0" max="100" value="7">
+            <span class="val" id="h7v">0.07</span>
+        </div>
+        <div class="row">
+            <label>9次 9f</label>
+            <input type="range" id="h9" min="0" max="100" value="3">
+            <span class="val" id="h9v">0.03</span>
+        </div>
+        <div class="row sep">
+            <label>气息噪声</label>
+            <input type="range" id="noiseAmt" min="0" max="100" value="30">
+            <span class="val" id="noiseAmtv">0.30</span>
+        </div>
+        <div class="row">
+            <label>颤音深度</label>
+            <input type="range" id="vibAmt" min="0" max="100" value="45">
+            <span class="val" id="vibAmtv">0.045</span>
+        </div>
+        <div class="row">
+            <label>音头亮度</label>
+            <input type="range" id="atkBright" min="0" max="200" value="180">
+            <span class="val" id="atkBrightv">1.80</span>
+        </div>
+        <div class="btns">
+            <button id="presetFlute">竖笛默认</button>
+            <button id="presetBright">明亮</button>
+            <button id="presetSoft">柔和</button>
+            <button id="presetOrgan">管风琴</button>
+        </div>
+    </div>
+</div>
+
+<div class="log-wrap">
+    <h4>播放记录（点击任意一条回放）</h4>
+    <div id="logList"><div class="log-empty">还没有录制记录</div></div>
+</div>
+
+<script>
+(function(){"use strict";
+
+/* ============================================================
+   竖笛音色合成器
+   闭管乐器只有奇次谐波：1f, 3f, 5f, 7f
+   叠加正弦波 + 唇边湍流 + 气息噪声
+   全部使用 Web Audio 内置节点，零自定义处理器
+   ============================================================ */
+
+// 谐波参数（可通过面板实时调节）
+var HARMONICS = [
+    {mult:1, amp:1.00, type:'sine'},
+    {mult:3, amp:0.42, type:'sine'},
+    {mult:5, amp:0.16, type:'sine'},
+    {mult:7, amp:0.07, type:'sine'},
+    {mult:9, amp:0.03, type:'sine'}
+];
+var NOISE_AMT = 0.30;
+var VIB_AMT = 0.045;
+var ATK_BRIGHT = 1.80;
+
+function makeNoiseBuffer(ctx, seconds){
+    var len = Math.floor(ctx.sampleRate * seconds);
+    var buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    var d = buf.getChannelData(0);
+    for(var i = 0; i < len; i++){
+        d[i] = Math.random() * 2 - 1;
+    }
+    return buf;
+}
+
+function makeIR(ctx, sec, decay){
+    var len = Math.floor(ctx.sampleRate * sec);
+    var buf = ctx.createBuffer(2, len, ctx.sampleRate);
+    for(var ch = 0; ch < 2; ch++){
+        var d = buf.getChannelData(ch);
+        for(var i = 0; i < len; i++){
+            var t = i / len;
+            var env = Math.pow(1 - t, decay);
+            var early = (i < ctx.sampleRate * 0.02) ? 1.6 : 1.0;
+            d[i] = (Math.random() * 2 - 1) * env * early;
+        }
+    }
+    return buf;
+}
+
+/* 单音符：创建一组振荡器，返回控制句柄 */
+function playNote(ctx, dest, freq, vel, noiseBuf){
+    var now = ctx.currentTime;
+    var vol = 0.26 * (vel || 1.0);
+
+    // 总音量包络：快速起音 → 稳定 → 释放
+    var env = ctx.createGain();
+    env.gain.setValueAtTime(0.0001, now);
+    env.gain.exponentialRampToValueAtTime(vol, now + 0.035);
+    env.gain.setValueAtTime(vol, now + 0.035);
+    env.gain.setTargetAtTime(vol * 0.85, now + 0.08, 0.15);
+
+    var nodes = [];
+    var oscs = [];
+
+    // 谐波振荡器
+    for(var i = 0; i < HARMONICS.length; i++){
+        var h = HARMONICS[i];
+        var osc = ctx.createOscillator();
+        osc.type = h.type;
+        osc.frequency.setValueAtTime(freq * h.mult, now);
+
+        // 高次谐波略微失谐，增加自然感
+        if(h.mult > 1){
+            osc.detune.setValueAtTime((Math.random() - 0.5) * 6, now);
+        }
+
+        var g = ctx.createGain();
+        g.gain.setValueAtTime(h.amp, now);
+
+        // 高次谐波起音更快、衰减更快（音头亮，随后变柔）
+              if(h.mult >= 5){
+            g.gain.setValueAtTime(h.amp * ATK_BRIGHT, now);
+            g.gain.exponentialRampToValueAtTime(h.amp * 0.6, now + 0.12);
+        }
+
+        osc.connect(g);
+        g.connect(env);
+        osc.start(now);
+        oscs.push(osc);
+        nodes.push(g);
+    }
+
+    // 唇边湍流：低频振荡调制基频幅度，模拟吹奏不稳
+    var lfo = ctx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.setValueAtTime(4.5 + Math.random() * 1.5, now);
+    var lfoGain = ctx.createGain();
+    lfoGain.gain.setValueAtTime(vol * VIB_AMT, now);
+    lfo.connect(lfoGain);
+    lfoGain.connect(env.gain);
+    lfo.start(now);
+    oscs.push(lfo);
+
+    // 气息噪声：带通滤波的白噪声，模拟气流声
+    var noise = ctx.createBufferSource();
+    noise.buffer = noiseBuf;
+    noise.loop = true;
+
+    var bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(freq * 2.5, now);
+    bp.Q.setValueAtTime(1.2, now);
+
+    var noiseGain = ctx.createGain();
+    // 音头气息重，之后减弱
+    noiseGain.gain.setValueAtTime(vol * NOISE_AMT, now);
+    noiseGain.gain.exponentialRampToValueAtTime(vol * NOISE_AMT * 0.2, now + 0.15);
+
+    noise.connect(bp);
+    bp.connect(noiseGain);
+    noiseGain.connect(env);
+    noise.start(now);
+
+    env.connect(dest);
+
+    return {
+        env: env,
+        oscs: oscs,
+        noise: noise,
+        nodes: nodes,
+        stop: function(when){
+            var t = when || ctx.currentTime;
+            try{
+                env.gain.cancelScheduledValues(t);
+                env.gain.setValueAtTime(env.gain.value, t);
+                env.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+            }catch(e){}
+            for(var k = 0; k < oscs.length; k++){
+                try{ oscs[k].stop(t + 0.32); }catch(e){}
+            }
+            try{ noise.stop(t + 0.32); }catch(e){}
+            var self = this;
+            setTimeout(function(){
+                try{ self.env.disconnect(); }catch(e){}
+                for(var k = 0; k < self.nodes.length; k++){
+                    try{ self.nodes[k].disconnect(); }catch(e){}
+                }
+            }, 400);
+        }
+    };
+}
+
+/* ============================================================
+   音频引擎初始化
+   ============================================================ */
+var ctx = null, master = null, convolver = null, noiseBuf = null;
+var audioReady = false;
+var statusEl = document.getElementById('status');
+
+function initAudio(){
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC){
+        statusEl.textContent = '浏览器不支持 Web Audio，请用 Edge 或 Chrome';
+        return false;
+    }
+    ctx = new AC();
+
+    master = ctx.createGain();
+    master.gain.value = 0.8;
+
+    convolver = ctx.createConvolver();
+    convolver.buffer = makeIR(ctx, 2.5, 2.2);
+    var wet = ctx.createGain();
+    wet.gain.value = 0.15;
+
+    master.connect(ctx.destination);
+    master.connect(convolver);
+    convolver.connect(wet);
+    wet.connect(ctx.destination);
+
+    noiseBuf = makeNoiseBuffer(ctx, 2);
+
+    audioReady = true;
+    statusEl.textContent = '就绪 · 按键 A S D F J K L';
+    return true;
+}
+
+/* ============================================================
+   音高与键位
+   ============================================================ */
+var BASE = 261.63;
+var SEMI = [0,2,4,5,7,9,11];
+var SCALE_NAMES = ['C','D','E','F','G','A','B'];
+var scaleSemi = 0;
+
+function freqOf(num){
+    var step = SEMI[parseInt(num,10) - 1];
+    return BASE * Math.pow(2, (step + scaleSemi) / 12);
+}
+var KEYMAP = {a:'1', s:'2', d:'3', f:'4', j:'5', k:'6', l:'7'};
+
+/* ============================================================
+   发声管理
+   ============================================================ */
+var active = {};
+
+function noteOn(num, vel, fromPlayback){
+    if(!audioReady || !ctx) return;
+    if(ctx.state === 'suspended') ctx.resume();
+    if(active[num]) return;
+
+    var handle = playNote(ctx, master, freqOf(num), vel || 1.0, noiseBuf);
+    active[num] = handle;
+
+    var el = document.querySelector('.key[data-num="'+num+'"]');
+    if(el) el.classList.add('on');
+
+    if(!fromPlayback && recState === 'recording'){
+        recLog.push({num:num, t:performance.now() - recStart, v:vel||1.0});
+    }
+}
+
+function noteOff(num){
+    if(!active[num]) return;
+    active[num].stop();
+    delete active[num];
+
+    var el = document.querySelector('.key[data-num="'+num+'"]');
+    if(el) el.classList.remove('on');
+}
+
+/* ============================================================
+   录制 / 回放
+   ============================================================ */
+var recState = 'idle';
+var recLog = [];
+var recStart = 0;
+var playTimer = null;
+var playIdx = 0;
+var pauseAt = 0;
+
+var recBtn = document.getElementById('recBtn');
+var playBtn = document.getElementById('playBtn');
+var pauseBtn = document.getElementById('pauseBtn');
+var stopBtn = document.getElementById('stopBtn');
+var clearBtn = document.getElementById('clearBtn');
+var logList = document.getElementById('logList');
+var scaleSel = document.getElementById('scale');
+
+function setRecState(s){
+    recState = s;
+    recBtn.classList.toggle('on', s === 'recording');
+    recBtn.textContent = (s === 'recording') ? '● 录制中…' : '● 开始录制';
+    pauseBtn.textContent = (s === 'paused') ? '▶ 继续' : '❚❚ 暂停';
+}
+
+recBtn.onclick = function(){
+    if(recState === 'recording'){
+        stopPlayback();
+        if(recLog.length > 0){
+            saveLog(recLog.slice());
+        }
+        recLog = [];
+        setRecState('idle');
+        statusEl.textContent = '录制结束，已保存到记录';
+    } else {
+        stopPlayback();
+        recLog = [];
+        recStart = performance.now();
+        setRecState('recording');
+        statusEl.textContent = '录制中… 弹奏你的旋律';
+    }
+};
+
+playBtn.onclick = function(){
+    if(recState === 'playing') return;
+    var logs = getLogs();
+    if(logs.length === 0){
+        statusEl.textContent = '没有可播放的记录，先录一段吧';
+        return;
+    }
+    startPlayback(logs[0]);
+};
+
+pauseBtn.onclick = function(){
+    if(recState === 'playing'){
+        clearTimeout(playTimer);
+        pauseAt = performance.now();
+        setRecState('paused');
+        statusEl.textContent = '已暂停';
+    } else if(recState === 'paused'){
+        var paused = performance.now() - pauseAt;
+        recStart += paused;
+        setRecState('playing');
+        scheduleNext();
+        statusEl.textContent = '播放中…';
+    }
+};
+
+stopBtn.onclick = function(){
+    stopPlayback();
+    statusEl.textContent = '已停止';
+};
+
+clearBtn.onclick = function(){
+    localStorage.removeItem('recorder_logs');
+    renderLogs();
+    statusEl.textContent = '记录已清空';
+};
+
+function stopPlayback(){
+    clearTimeout(playTimer);
+    for(var k in active){
+        try{ active[k].stop(); }catch(e){}
+    }
+    active = {};
+    document.querySelectorAll('.key.on').forEach(function(e){e.classList.remove('on');});
+    if(recState === 'playing' || recState === 'paused') setRecState('idle');
+}
+
+function startPlayback(log){
+    stopPlayback();
+    recLog = log;
+    playIdx = 0;
+    recStart = performance.now();
+    setRecState('playing');
+    statusEl.textContent = '播放中… 共 ' + log.length + ' 个音';
+    scheduleNext();
+}
+
+function scheduleNext(){
+    if(recState !== 'playing') return;
+    if(playIdx >= recLog.length){
+        setTimeout(function(){
+            if(recState === 'playing'){
+                setRecState('idle');
+                statusEl.textContent = '播放完毕';
+            }
+        }, 500);
+        return;
+    }
+    var ev = recLog[playIdx];
+    var delay = ev.t - (performance.now() - recStart);
+    if(delay < 0) delay = 0;
+
+    playTimer = setTimeout(function(){
+        if(recState !== 'playing') return;
+        noteOn(ev.num, ev.v, true);
+        (function(n){
+            setTimeout(function(){ noteOff(n); }, 280);
+        })(ev.num);
+        playIdx++;
+        scheduleNext();
+    }, delay);
+}
+
+/* ============================================================
+   记录持久化
+   ============================================================ */
+function getLogs(){
+    try{
+        var s = localStorage.getItem('recorder_logs');
+        return s ? JSON.parse(s) : [];
+    }catch(e){ return []; }
+}
+
+function saveLog(log){
+    var logs = getLogs();
+    logs.unshift({
+        notes: log.map(function(e){return e.num;}).join(''),
+        events: log,
+        time: new Date().toLocaleString('zh-CN')
+    });
+    if(logs.length > 20) logs = logs.slice(0, 20);
+    try{ localStorage.setItem('recorder_logs', JSON.stringify(logs)); }catch(e){}
+    renderLogs();
+}
+
+function renderLogs(){
+    var logs = getLogs();
+    if(logs.length === 0){
+        logList.innerHTML = '<div class="log-empty">还没有录制记录</div>';
+        return;
+    }
+    logList.innerHTML = '';
+    logs.forEach(function(item, i){
+        var div = document.createElement('div');
+        div.className = 'log-item';
+        div.innerHTML = '<span class="notes">' + item.notes + '</span>' +
+                        '<span class="meta">' + item.time + ' · ' +
+                        item.events.length + '音</span>';
+        div.onclick = function(){
+            startPlayback(item.events);
+        };
+        logList.appendChild(div);
+    });
+}
+
+/* ============================================================
+   交互绑定
+   ============================================================ */
+document.querySelectorAll('.key').forEach(function(el){
+    var num = el.getAttribute('data-num');
+
+    el.addEventListener('pointerdown', function(e){
+        e.preventDefault();
+        if(recState === 'playing' || recState === 'paused') return;
+        noteOn(num, 1.0, false);
+    });
+
+    el.addEventListener('pointerup', function(){
+        if(recState === 'playing' || recState === 'paused') return;
+        noteOff(num);
+    });
+
+    el.addEventListener('pointerleave', function(){
+        if(recState === 'playing' || recState === 'paused') return;
+        noteOff(num);
+    });
+
+    el.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+});
+
+document.addEventListener('keydown', function(e){
+    if(e.repeat) return;
+    var num = KEYMAP[e.key.toLowerCase()];
+    if(!num) return;
+    if(recState === 'playing' || recState === 'paused') return;
+    e.preventDefault();
+    noteOn(num, 1.0, false);
+});
+
+document.addEventListener('keyup', function(e){
+    var num = KEYMAP[e.key.toLowerCase()];
+    if(!num) return;
+    if(recState === 'playing' || recState === 'paused') return;
+    noteOff(num);
+});
+
+scaleSel.addEventListener('change', function(){
+    scaleSemi = parseInt(this.value, 10);
+    statusEl.textContent = '已切换到 ' + SCALE_NAMES[[0,2,4,5,7,9,11].indexOf(scaleSemi)] + ' 调';
+});
+
+document.addEventListener('visibilitychange', function(){
+    if(document.hidden){
+        stopPlayback();
+    }
+});
+
+/* ============================================================
+   谐波调节面板
+   ============================================================ */
+var panel = document.getElementById('panel');
+var panelHead = document.getElementById('panelHead');
+
+panelHead.onclick = function(){
+    panel.classList.toggle('closed');
+};
+
+function bindSlider(id, key, scale, fmt){
+    var el = document.getElementById(id);
+    var val = document.getElementById(id + 'v');
+    el.addEventListener('input', function(){
+        var v = parseInt(this.value, 10) / scale;
+        if(key === 'h1') HARMONICS[0].amp = v;
+        else if(key === 'h3') HARMONICS[1].amp = v;
+        else if(key === 'h5') HARMONICS[2].amp = v;
+        else if(key === 'h7') HARMONICS[3].amp = v;
+        else if(key === 'h9') HARMONICS[4].amp = v;
+        else if(key === 'noiseAmt') NOISE_AMT = v;
+        else if(key === 'vibAmt') VIB_AMT = v;
+        else if(key === 'atkBright') ATK_BRIGHT = v;
+        val.textContent = v.toFixed(fmt);
+    });
+}
+
+bindSlider('h1', 'h1', 100, 2);
+bindSlider('h3', 'h3', 100, 2);
+bindSlider('h5', 'h5', 100, 2);
+bindSlider('h7', 'h7', 100, 2);
+bindSlider('h9', 'h9', 100, 2);
+bindSlider('noiseAmt', 'noiseAmt', 100, 2);
+bindSlider('vibAmt', 'vibAmt', 1000, 3);
+bindSlider('atkBright', 'atkBright', 100, 2);
+
+function setSliders(obj){
+    for(var k in obj){
+        var el = document.getElementById(k);
+        var val = document.getElementById(k + 'v');
+        if(!el) continue;
+        var scale = (k === 'atkBright') ? 100 : (k === 'vibAmt') ? 1000 : 100;
+        el.value = Math.round(obj[k] * scale);
+        val.textContent = obj[k].toFixed(k === 'vibAmt' ? 3 : 2);
+        el.dispatchEvent(new Event('input'));
+    }
+}
+
+document.getElementById('presetFlute').onclick = function(){
+    setSliders({h1:1.00, h3:0.42, h5:0.16, h7:0.07, h9:0.03,
+                noiseAmt:0.30, vibAmt:0.045, atkBright:1.80});
+    statusEl.textContent = '已切换到：竖笛默认';
+};
+document.getElementById('presetBright').onclick = function(){
+    setSliders({h1:1.00, h3:0.55, h5:0.30, h7:0.15, h9:0.08,
+                noiseAmt:0.40, vibAmt:0.030, atkBright:2.20});
+    statusEl.textContent = '已切换到：明亮';
+};
+document.getElementById('presetSoft').onclick = function(){
+    setSliders({h1:1.00, h3:0.25, h5:0.06, h7:0.02, h9:0.01,
+                noiseAmt:0.15, vibAmt:0.060, atkBright:1.20});
+    statusEl.textContent = '已切换到：柔和';
+};
+document.getElementById('presetOrgan').onclick = function(){
+    setSliders({h1:1.00, h3:0.50, h5:0.35, h7:0.25, h9:0.15,
+                noiseAmt:0.05, vibAmt:0.020, atkBright:1.00});
+    statusEl.textContent = '已切换到：管风琴';
+};
+
+/* ============================================================
+   启动
+   ============================================================ */
+renderLogs();
+
+if(!initAudio()){
+    document.querySelectorAll('.key').forEach(function(el){
+        el.style.opacity = '0.4';
+        el.style.pointerEvents = 'none';
+    });
+    return;
+}
+
+var unlock = function(){
+    if(ctx && ctx.state === 'suspended') ctx.resume();
+    document.removeEventListener('pointerdown', unlock);
+    document.removeEventListener('keydown', unlock);
+};
+document.addEventListener('pointerdown', unlock);
+document.addEventListener('keydown', unlock);
+
+})();
+</script>
+</body>
+</html>
