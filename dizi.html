@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover">
-<title>七音竖笛 · 谐波合成 · v33</title>
+<title>七音竖笛 · 谐波合成 · v39</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%}
@@ -118,7 +118,7 @@ h1{font-size:16px;font-weight:normal;color:#888;margin-bottom:14px;letter-spacin
     display:block;
     height:auto;min-height:100vh;min-height:100dvh;
     overflow-x:hidden;overflow-y:auto;
-    padding:12px 10px calc(64px + env(safe-area-inset-bottom));
+    padding:10px 10px calc(8px + env(safe-area-inset-bottom));
     -webkit-overflow-scrolling:touch;
     text-align:center;
   }
@@ -145,13 +145,13 @@ h1{font-size:16px;font-weight:normal;color:#888;margin-bottom:14px;letter-spacin
   /* 布局（2026-11-25）：琴键挪到最下面，拇指够得着；
      参数面板默认收起（JS 加 .closed），这样一屏就能看到键和工具条。
      #stage 撑到接近满屏 + 键区 margin-top:auto，键才会顶到屏幕底部。 */
-  #stage{min-height:calc(100vh - 90px);min-height:calc(100dvh - 90px)}
+  #stage{min-height:calc(100vh - 20px);min-height:calc(100dvh - 20px)}
   h1{order:1}
   .bar{order:2}
   .status{order:3}
-  .panel{order:4}
-  .log-wrap{order:5}
-  .keys{order:6;margin:auto 0 2px}
+  .keys{order:4;margin:8px 0;padding:4px 0}
+  .panel{order:5}
+  .log-wrap{order:6}
 }
 
 /* 横屏手机（屏幕很矮）：工具条那一行拆成两格 ——
@@ -246,6 +246,9 @@ input,textarea,select{-webkit-user-select:auto !important;user-select:auto !impo
   flex:0 0 auto;width:24px;height:24px;border:none;border-radius:50%;
   background:transparent;color:#c9b98e;font-size:16px;line-height:1;cursor:pointer;padding:0
 }
+/* 预设按钮挪到面板顶部后，下面要留白，否则会贴住第一行滑杆（2026-11-25） */
+.panel-body > .btns:first-child{margin-top:2px;margin-bottom:16px}
+.panel-body > .btns:first-child button{padding:9px 10px}
 </style>
 </head>
 <body>
@@ -257,7 +260,7 @@ input,textarea,select{-webkit-user-select:auto !important;user-select:auto !impo
 </div>
 <div id="stage">
 
-<h1>七音竖笛 · 奇次谐波合成 · v33</h1>
+<h1>七音竖笛 · 奇次谐波合成 · v39</h1>
 
 <div class="keys" id="keys">
     <div class="key" data-num="1"><div class="num">1</div><div class="nm">Do</div></div>
@@ -294,6 +297,12 @@ input,textarea,select{-webkit-user-select:auto !important;user-select:auto !impo
         <span class="toggle">▼</span>
     </div>
     <div class="panel-body">
+        <div class="btns">
+            <button id="presetFlute">竖笛默认</button>
+            <button id="presetBright">明亮</button>
+            <button id="presetSoft">柔和</button>
+            <button id="presetOrgan">管风琴</button>
+        </div>
         <div class="row">
             <label>基频 1f</label>
             <input type="range" id="h1" min="0" max="100" value="100">
@@ -334,15 +343,8 @@ input,textarea,select{-webkit-user-select:auto !important;user-select:auto !impo
             <input type="range" id="atkBright" min="0" max="200" value="180">
             <span class="val" id="atkBrightv">1.80</span>
         </div>
-        <div class="btns">
-            <button id="presetFlute">竖笛默认</button>
-            <button id="presetBright">明亮</button>
-            <button id="presetSoft">柔和</button>
-            <button id="presetOrgan">管风琴</button>
-        </div>
     </div>
 </div>
-
 <div class="log-wrap">
     <h4>播放记录（点击任意一条回放）</h4>
     <div id="logList"><div class="log-empty">还没有录制记录</div></div>
@@ -1197,6 +1199,13 @@ window.addEventListener('orientationchange', function(){ setTimeout(placeZoombar
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
 
 
 
